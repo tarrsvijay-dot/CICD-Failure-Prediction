@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated datasets
+data/dataset.csv
+data/processed_dataset.csv
+data/engineered_dataset.csv
+data/features_v3.csv
+data/run_dataset.csv
+data/run_target_dataset.csv
+
+# Large/old models
+models/failure_model.pkl
+models/failure_model_time_based.pkl
+models/failure_model_v2.pkl
+models/failure_model_v3.pkl
+
+# Keep the final V4 model
+!models/failure_model_v4.pkl
+
+# Temporary files
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

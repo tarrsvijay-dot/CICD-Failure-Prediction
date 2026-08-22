@@ -14,25 +14,7 @@ print("Original shape:", df.shape)
 
 
 # ============================================================
-# 1. PREPARE DATE
-# ============================================================
-
-df["commit_date"] = pd.to_datetime(
-    df["commit_date"],
-    errors="coerce",
-    utc=True
-)
-
-# We need a date for chronological historical features
-df = df.dropna(subset=["commit_date"])
-
-df = df.sort_values(
-    ["repo", "commit_date"]
-).reset_index(drop=True)
-
-
-# ============================================================
-# 2. CREATE TARGET
+# 1. CREATE TARGET FIRST
 # ============================================================
 
 failure_values = [
@@ -59,7 +41,7 @@ df.loc[
     "pipeline_failed"
 ] = 0
 
-# Keep only actual success/failure records
+# Keep only clear SUCCESS / FAILURE records
 df = df.dropna(
     subset=["pipeline_failed"]
 )
@@ -68,8 +50,43 @@ df["pipeline_failed"] = df[
     "pipeline_failed"
 ].astype(int)
 
+print(
+    "\nRecords after target filtering:",
+    len(df)
+)
 
-print("\nRecords after target filtering:", len(df))
+
+# ============================================================
+# 2. CREATE A RELIABLE TIMESTAMP
+# ============================================================
+
+# commit_date is missing for many records, so we use the
+# CI/CD run timestamp instead.
+
+df["run_time"] = pd.to_datetime(
+    df["created_at"],
+    errors="coerce",
+    utc=True
+)
+
+# If created_at is missing, use run_started_at
+missing_time = df["run_time"].isna()
+
+df.loc[missing_time, "run_time"] = pd.to_datetime(
+    df.loc[missing_time, "run_started_at"],
+    errors="coerce",
+    utc=True
+)
+
+# Remove only records that have no usable CI/CD timestamp
+df = df.dropna(
+    subset=["run_time"]
+)
+
+# Sort by repository and time
+df = df.sort_values(
+    ["repo", "run_time"]
+).reset_index(drop=True)
 
 
 # ============================================================
@@ -103,7 +120,6 @@ for column in numeric_columns:
         errors="coerce"
     )
 
-    # Fill missing values using the whole dataset median
     df[column] = df[column].fillna(
         df[column].median()
     )
@@ -112,25 +128,42 @@ df["is_merge"] = df["is_merge"].fillna(0)
 
 
 # ============================================================
-# 4. HISTORICAL PIPELINE FEATURES
+# 4. HISTORICAL CI/CD FEATURES
 # ============================================================
 
-# For each repository, calculate information from PREVIOUS
-# pipeline executions only.
+# IMPORTANT:
+#
+# shift(1) means the current pipeline result is NOT included
+# when calculating historical information.
+#
+# Therefore:
+#
+# Previous runs → features
+# Current run    → target
+#
+# This helps prevent target leakage.
 
+
+# Number of previous pipeline runs
 df["previous_pipeline_runs"] = (
     df.groupby("repo")
       .cumcount()
 )
 
+
+# Number of previous failures
 df["previous_pipeline_failures"] = (
     df.groupby("repo")["pipeline_failed"]
       .transform(
-          lambda x: x.shift(1).fillna(0).cumsum()
+          lambda x:
+          x.shift(1)
+           .fillna(0)
+           .cumsum()
       )
 )
 
-# Previous failure rate
+
+# Historical failure rate
 df["previous_failure_rate"] = (
     df["previous_pipeline_failures"]
     /
@@ -141,6 +174,8 @@ df["previous_failure_rate"] = (
 # ============================================================
 # 5. RECENT PIPELINE HISTORY
 # ============================================================
+
+# Failures among the previous 5 runs
 
 df["recent_failure_count"] = (
     df.groupby("repo")["pipeline_failed"]
@@ -155,6 +190,9 @@ df["recent_failure_count"] = (
       )
 )
 
+
+# Number of previous runs in the last 5-run window
+
 df["recent_run_count"] = (
     df.groupby("repo")["pipeline_failed"]
       .transform(
@@ -168,6 +206,9 @@ df["recent_run_count"] = (
       )
 )
 
+
+# Recent failure rate
+
 df["recent_failure_rate"] = (
     df["recent_failure_count"]
     /
@@ -176,12 +217,8 @@ df["recent_failure_rate"] = (
 
 
 # ============================================================
-# 6. FILL HISTORICAL FEATURES
+# 6. HANDLE FIRST-RUN VALUES
 # ============================================================
-
-# A repository's first pipeline has no previous history.
-# That is not a missing/error condition — it simply means
-# there were zero previous runs.
 
 historical_columns = [
     "previous_pipeline_failures",
@@ -193,12 +230,11 @@ historical_columns = [
 ]
 
 for column in historical_columns:
-
     df[column] = df[column].fillna(0)
 
 
 # ============================================================
-# 7. SELECT FINAL FEATURES
+# 7. SELECT FEATURES
 # ============================================================
 
 feature_columns = [
@@ -229,7 +265,7 @@ final_df = df[
     feature_columns +
     [
         "pipeline_failed",
-        "commit_date",
+        "run_time",
         "repo"
     ]
 ].copy()
@@ -258,10 +294,11 @@ final_df.to_csv(
 
 
 # ============================================================
-# 11. INFORMATION
+# 11. DISPLAY RESULTS
 # ============================================================
 
 print("\nEngineered features:")
+
 for feature in feature_columns:
     print(" -", feature)
 
@@ -280,10 +317,13 @@ print(
     final_df["pipeline_failed"].value_counts()
 )
 
-print("\nMissing values:")
+print("\nMissing feature values:")
 
 print(
-    final_df[feature_columns].isnull().sum().sum()
+    final_df[feature_columns]
+    .isnull()
+    .sum()
+    .sum()
 )
 
 print("\nSaved to:")
