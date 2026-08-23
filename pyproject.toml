@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "cicd-check"
+version = "1.0.0"
+description = "CI/CD pipeline failure prediction and repository analysis CLI"
+requires-python = ">=3.9"
+
+
+[project.scripts]
+cicd = "src.cicd_cli:main"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

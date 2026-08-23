@@ -1,0 +1,2 @@
+[console_scripts]
+cicd = cicd_cli:main
