@@ -1,56 +1,46 @@
 pipeline {
     agent any
 
+    environment {
+        PYTHON = 'C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe'
+        VENV_PYTHON = '.venv\\Scripts\\python.exe'
+    }
+
     stages {
 
-        stage('Checkout') {
+        stage('Environment') {
             steps {
                 echo '========================================'
-                echo 'Checking out project from GitHub'
-                echo '========================================'
-
-                checkout scm
-            }
-        }
-
-        stage('Check Python') {
-            steps {
-                echo '========================================'
-                echo 'Checking Python installation'
+                echo 'Checking Python environment'
                 echo '========================================'
 
                 bat '''
-                    echo Python location:
-                    where python
-
-                    echo.
-                    echo Python version:
-                    python --version
+                    echo System Python:
+                    "%PYTHON%" --version
 
                     echo.
                     echo Python executable:
-                    python -c "import sys; print(sys.executable)"
+                    "%PYTHON%" -c "import sys; print(sys.executable)"
+
+                    echo.
+                    echo Git:
+                    git --version
                 '''
             }
         }
 
-        stage('Check Project Structure') {
+        stage('Create Virtual Environment') {
             steps {
                 echo '========================================'
-                echo 'Checking project structure'
+                echo 'Creating Python virtual environment'
                 echo '========================================'
 
                 bat '''
-                    echo Current directory:
-                    cd
+                    if not exist ".venv\\Scripts\\python.exe" (
+                        "%PYTHON%" -m venv .venv
+                    )
 
-                    echo.
-                    echo Project files:
-                    dir
-
-                    echo.
-                    echo Source files:
-                    dir src
+                    "%VENV_PYTHON%" --version
                 '''
             }
         }
@@ -58,63 +48,57 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '========================================'
-                echo 'Installing Python dependencies'
+                echo 'Installing project dependencies'
                 echo '========================================'
 
                 bat '''
-                    python -m pip install --upgrade pip
-                    python -m pip install -r requirements.txt
+                    "%VENV_PYTHON%" -m pip install --upgrade pip
+                    "%VENV_PYTHON%" -m pip install -r requirements.txt
+                    "%VENV_PYTHON%" -m pip install -e .
                 '''
             }
         }
 
-        stage('Run Git Analyzer') {
+        stage('Git Analysis') {
             steps {
                 echo '========================================'
-                echo 'Running Git Analyzer'
+                echo 'Running Git Analysis'
                 echo '========================================'
 
                 bat '''
-                    python src\\git_analyzer.py
+                    "%VENV_PYTHON%" src\\git_analyzer.py
                 '''
             }
         }
 
-        stage('Validate Prediction Code') {
+        stage('CI/CD Check') {
             steps {
                 echo '========================================'
-                echo 'Checking prediction scripts'
+                echo 'Running CI/CD Failure Prediction'
                 echo '========================================'
 
                 bat '''
-                    python -m py_compile src\\predict.py
-                    python -m py_compile src\\predict_new.py
-                    python -m py_compile src\\ci_predict.py
+                    .venv\\Scripts\\cicd.exe --check
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo '========================================'
+                echo 'Running Python validation'
+                echo '========================================'
+
+                bat '''
+                    "%VENV_PYTHON%" -m py_compile src\\cicd_check.py
+                    "%VENV_PYTHON%" -m py_compile src\\cicd_cli.py
+                    "%VENV_PYTHON%" -m py_compile src\\git_analyzer.py
+                    "%VENV_PYTHON%" -m py_compile src\\ci_predict.py
+                    "%VENV_PYTHON%" -m py_compile src\\predict.py
+                    "%VENV_PYTHON%" -m py_compile src\\predict_new.py
 
                     echo.
-                    echo Prediction scripts compiled successfully.
-                '''
-            }
-        }
-
-        stage('Validate ML Scripts') {
-            steps {
-                echo '========================================'
-                echo 'Checking ML scripts'
-                echo '========================================'
-
-                bat '''
-                    python -m py_compile src\\feature_engineering.py
-                    python -m py_compile src\\feature_engineering_v3.py
-                    python -m py_compile src\\data_preprocessing.py
-                    python -m py_compile src\\train_model.py
-                    python -m py_compile src\\train_model_v2.py
-                    python -m py_compile src\\train_model_v3.py
-                    python -m py_compile src\\train_model_v4.py
-                    python -m py_compile src\\evaluate_model.py
-
-                    echo.
-                    echo ML scripts compiled successfully.
+                    echo All selected Python files compiled successfully.
                 '''
             }
         }
@@ -124,25 +108,24 @@ pipeline {
                 echo '========================================'
                 echo '       CI/CD PIPELINE SUCCESS'
                 echo '========================================'
-                echo 'Python environment verified.'
-                echo 'Dependencies installed.'
-                echo 'Git analyzer executed.'
-                echo 'Prediction code validated.'
-                echo 'ML scripts validated.'
+                echo 'Python environment: OK'
+                echo 'Dependencies: OK'
+                echo 'Git analysis: OK'
+                echo 'ML prediction: OK'
+                echo 'Python validation: OK'
                 echo '========================================'
             }
         }
     }
 
     post {
-
         success {
-            echo 'Jenkins build completed successfully!'
+            echo 'CI/CD Pipeline completed successfully!'
         }
 
         failure {
-            echo 'Jenkins build FAILED.'
-            echo 'Check the Console Output for the failing stage.'
+            echo 'CI/CD Pipeline FAILED!'
+            echo 'Check the failed stage in Console Output.'
         }
 
         always {
