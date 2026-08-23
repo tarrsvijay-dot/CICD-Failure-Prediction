@@ -129,5 +129,3 @@ More advanced Machine Learning models
 Tarrsan Vijay
 M.Tech Software Engineering Student
 VIT Vellore
-
-Jenkins CI/CD integration enabled.
