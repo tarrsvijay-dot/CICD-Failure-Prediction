@@ -92,8 +92,7 @@ Total code churn
 
 Example:
 
-CI/CD Git Analysis
-------------------------------
+**CI/CD Git Analysis**
 commit_hash: 666d4ae4cf35b691780a9a47de146fab5bb158d6
 num_parents: 1
 is_merge: 0
