@@ -34,6 +34,7 @@ Recent pipeline runs
 Recent failure rate
 Other historical and temporal features
 
+....
 These features help the model identify patterns associated with CI/CD pipeline failures.
 
 **Project folder structure**
