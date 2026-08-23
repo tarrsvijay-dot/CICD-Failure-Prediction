@@ -1,4 +1,4 @@
-CI/CD Pipeline Failure and Success Prediction using Machine Learning
+**CI/CD Pipeline Failure and Success Prediction using Machine Learning**
 
 A Machine Learning-based system that predicts whether a CI/CD pipeline is likely to fail or succeed using historical software development and pipeline data.
 
@@ -16,7 +16,6 @@ Provide an interactive prediction interface using Streamlit.
 Integrate the prediction system with a CI/CD workflow.
 
 **Machine Learning Features**
-
 The model uses features related to software development and previous pipeline behavior, including:
 
 Commit message length
