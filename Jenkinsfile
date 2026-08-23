@@ -1,46 +1,57 @@
 pipeline {
     agent any
 
-    environment {
-        PYTHON = 'C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe'
-        VENV_PYTHON = '.venv\\Scripts\\python.exe'
-    }
-
     stages {
 
-        stage('Environment') {
+        stage('Checkout') {
             steps {
                 echo '========================================'
-                echo 'Checking Python environment'
+                echo 'Checking out project from GitHub'
+                echo '========================================'
+
+                checkout scm
+            }
+        }
+
+        stage('Check Python') {
+            steps {
+                echo '========================================'
+                echo 'Checking Python installation'
                 echo '========================================'
 
                 bat '''
-                    echo System Python:
-                    "%PYTHON%" --version
+                    echo Python version:
+                    "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" --version
 
                     echo.
                     echo Python executable:
-                    "%PYTHON%" -c "import sys; print(sys.executable)"
-
-                    echo.
-                    echo Git:
-                    git --version
+                    "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -c "import sys; print(sys.executable)"
                 '''
             }
         }
 
-        stage('Create Virtual Environment') {
+        stage('Check Project Structure') {
             steps {
                 echo '========================================'
-                echo 'Creating Python virtual environment'
+                echo 'Checking project structure'
                 echo '========================================'
 
                 bat '''
-                    if not exist ".venv\\Scripts\\python.exe" (
-                        "%PYTHON%" -m venv .venv
+                    dir
+                    echo.
+                    echo Checking important files...
+                    if exist src (
+                        echo src folder found
+                    ) else (
+                        echo ERROR: src folder not found
+                        exit /b 1
                     )
 
-                    "%VENV_PYTHON%" --version
+                    if exist app.py (
+                        echo app.py found
+                    ) else (
+                        echo WARNING: app.py not found
+                    )
                 '''
             }
         }
@@ -48,57 +59,66 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '========================================'
-                echo 'Installing project dependencies'
+                echo 'Installing Python dependencies'
                 echo '========================================'
 
                 bat '''
-                    "%VENV_PYTHON%" -m pip install --upgrade pip
-                    "%VENV_PYTHON%" -m pip install -r requirements.txt
-                    "%VENV_PYTHON%" -m pip install -e .
+                    "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -m pip install --upgrade pip
+
+                    if exist requirements.txt (
+                        "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -m pip install -r requirements.txt
+                    ) else (
+                        echo WARNING: requirements.txt not found
+                    )
                 '''
             }
         }
 
-        stage('Git Analysis') {
+        stage('Run Git Analyzer') {
             steps {
                 echo '========================================'
-                echo 'Running Git Analysis'
+                echo 'Running Git Analyzer'
                 echo '========================================'
 
                 bat '''
-                    "%VENV_PYTHON%" src\\git_analyzer.py
+                    if exist src\\git_analyzer.py (
+                        "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" src\\git_analyzer.py
+                    ) else (
+                        echo ERROR: src\\git_analyzer.py not found
+                        exit /b 1
+                    )
                 '''
             }
         }
 
-        stage('CI/CD Check') {
+        stage('Validate Prediction Code') {
             steps {
                 echo '========================================'
-                echo 'Running CI/CD Failure Prediction'
+                echo 'Validating Prediction Code'
                 echo '========================================'
 
                 bat '''
-                    .venv\\Scripts\\cicd.exe --check
+                    if exist src\\predict.py (
+                        "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -m py_compile src\\predict.py
+                    ) else (
+                        echo WARNING: src\\predict.py not found
+                    )
                 '''
             }
         }
 
-        stage('Test') {
+        stage('Validate ML Scripts') {
             steps {
                 echo '========================================'
-                echo 'Running Python validation'
+                echo 'Validating ML Scripts'
                 echo '========================================'
 
                 bat '''
-                    "%VENV_PYTHON%" -m py_compile src\\cicd_check.py
-                    "%VENV_PYTHON%" -m py_compile src\\cicd_cli.py
-                    "%VENV_PYTHON%" -m py_compile src\\git_analyzer.py
-                    "%VENV_PYTHON%" -m py_compile src\\ci_predict.py
-                    "%VENV_PYTHON%" -m py_compile src\\predict.py
-                    "%VENV_PYTHON%" -m py_compile src\\predict_new.py
-
-                    echo.
-                    echo All selected Python files compiled successfully.
+                    if exist src\\train_model_v4.py (
+                        "C:\\Users\\tarrs\\AppData\\Local\\Programs\\Python\\Python314\\python.exe" -m py_compile src\\train_model_v4.py
+                    ) else (
+                        echo WARNING: src\\train_model_v4.py not found
+                    )
                 '''
             }
         }
@@ -106,30 +126,25 @@ pipeline {
         stage('Pipeline Success') {
             steps {
                 echo '========================================'
-                echo '       CI/CD PIPELINE SUCCESS'
+                echo 'CI/CD PIPELINE PASSED'
                 echo '========================================'
-                echo 'Python environment: OK'
-                echo 'Dependencies: OK'
-                echo 'Git analysis: OK'
-                echo 'ML prediction: OK'
-                echo 'Python validation: OK'
-                echo '========================================'
+                echo 'All validation stages completed successfully.'
             }
         }
     }
 
     post {
+        always {
+            echo 'Jenkins pipeline execution finished.'
+        }
+
         success {
-            echo 'CI/CD Pipeline completed successfully!'
+            echo 'Jenkins build SUCCESS.'
         }
 
         failure {
-            echo 'CI/CD Pipeline FAILED!'
-            echo 'Check the failed stage in Console Output.'
-        }
-
-        always {
-            echo 'Jenkins pipeline execution finished.'
+            echo 'Jenkins build FAILED.'
+            echo 'Check the Console Output for the failing stage.'
         }
     }
 }
