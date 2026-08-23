@@ -1,2 +1,0 @@
-[console_scripts]
-cicd = src.cicd_cli:main

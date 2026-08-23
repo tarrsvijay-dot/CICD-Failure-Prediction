@@ -34,3 +34,6 @@ models/failure_model_v3.pkl
 # OS
 .DS_Store
 Thumbs.db
+
+# Python packaging
+*.egg-info/
