@@ -38,45 +38,6 @@ Data Processing	        Pandas
 Application	        Python
 Environment	        Python Virtual Environment
 
-**Project Architecture**
-NOTE : SINCE THIS PROJECT IS STILL UNDER DEVELOPMENT THE STRUCTURE CHANGES
-
-CICD-Failure-Prediction/
-│
-├── .github/
-│
-├── data/
-│   └── Dataset and processed data
-│
-├── models/
-│   └── Trained machine learning models
-│
-├── notebooks/
-│   └── Data analysis and experimentation
-│
-├── src/
-│   └── Source code
-│       └── git_analyzer.py
-│
-├── tests/
-│   └── Automated test cases
-│
-├── app.py
-│   └── Prediction application
-│
-├── Jenkinsfile
-│   └── Jenkins CI/CD pipeline configuration
-│
-├── requirements.txt
-│   └── Python dependencies
-│
-├── pyproject.toml
-│   └── Python project configuration
-│
-├── README.md
-│
-└── .gitignore
-
 **WorkFlow**
 1. Git Commit Analysis
 
